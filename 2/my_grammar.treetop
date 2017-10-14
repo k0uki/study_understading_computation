@@ -1,0 +1,6 @@
+# You can use a .tt extension instead if you wish
+grammar MyGrammar
+  rule hello
+    'hello chomsky'
+  end
+end

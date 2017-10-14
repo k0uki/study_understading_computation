@@ -1,0 +1,154 @@
+# numeric
+ZERO = "-> p { -> x{x}}"
+ONE = "-> p {-> x{ p[x] }}"
+TWO = "-> p {-> x{ p[p[x]] }}"
+THREE = "-> p {-> x{ p[p[p[x]]] }}"
+FOUR = "-> p {-> x{p[p[p[p[x]]]] }}"
+FIVE = "-> p {-> x{p[p[p[p[p[x]]]]] }}"
+FIFTEEN = "-> p {-> x{p[p[p[p[p[p[p[p[p[p[p[p[p[p[p[x]]]]]]]]]]]]]]] }}"
+
+# boolean
+TRUE = "-> x{ -> y{ x }}"
+FALSE = "-> x{ -> y{ y }}"
+
+# if-elsif-else
+
+IF = "-> b { b }"
+IS_ZERO = "-> n { n[-> x{ #{FALSE} }][ #{TRUE} ] }"
+
+# pair
+PAIR = "-> x { ->y { -> f {f[x][y]} }}"
+LEFT = "-> p { p[-> x{ ->y{ x }}]}"
+RIGHT = "-> p { p[-> x{ ->y{ y }}]}"
+
+INCREMENT = "-> n { -> p { -> x { p[n[p][x]] }}}"
+
+SLIDE = "-> p {#{PAIR}[#{RIGHT}[p]][#{INCREMENT}[#{RIGHT}[p]]]}"
+DECREMENT = "-> n {#{LEFT}[n[#{SLIDE}][#{PAIR}[#{ZERO}][#{ZERO}]]] }"
+#
+ADD = "-> m { -> n { n[#{INCREMENT}][m] }}"
+SUBTRACT = "-> m { -> n { n[#{DECREMENT}][m]}}"
+MULTIPLY = "-> m { -> n { n[#{ADD}[m]][#{ZERO}] }}"
+POWER = "-> m { -> n { n[#{MULTIPLY}[m][#{ONE}]]} }"
+
+# # mod
+IS_LESS_OR_EQUAL = <<~STR.gsub(/(\s)/,"")
+                        -> m {
+                          -> n {
+                              #{IS_ZERO}[#{SUBTRACT}[m][n]]
+                          }
+                        }
+                   STR
+
+# y combinator
+Y = "-> f { -> x { f[x[x]] }[-> x { f[x[x]] }] }"
+# z combinator
+Z = "-> f { -> x {f[-> y{x[x][y]} ]}[ ->x {f [-> y{x[x][y] }] }] }"
+
+MOD = <<~STR.gsub(/(\s)/, "")
+        #{Z}[ -> f { -> m {
+        -> n {
+          #{IF}[#{IS_LESS_OR_EQUAL}[n][m]][
+            -> x {
+              f[#{SUBTRACT}[m][n]][n][x]
+            }
+          ][
+            m
+          ]
+        }} }]
+      STR
+
+# list
+EMPTY = "#{PAIR}[#{TRUE}][#{TRUE}]"
+UNSHIFT = <<~STR.gsub(/(\s)/, "")
+            -> l { -> x {
+              #{PAIR}[#{FALSE}][#{PAIR}[x][l]]
+  }}
+  STR
+
+IS_EMPTY = "#{LEFT}"
+FIRST = "-> l { #{LEFT}[#{RIGHT}[l]] }"
+REST = "-> l { #{RIGHT}[#{RIGHT}[l]] }"
+
+# # range
+RANGE = <<~STR.gsub(/(\s)/, "")
+  #{Z}[-> f{
+      -> m { -> n {
+          #{IF}[#{IS_LESS_OR_EQUAL}[m][n]][
+            -> x {
+              #{UNSHIFT}[f[#{INCREMENT}[m]][n]][m][x]
+            }
+          ][
+            #{EMPTY}
+          ]
+        }}
+    }]
+  STR
+
+# map
+FOLD = <<~STR.gsub(/(\s)/, "")
+  #{Z}[-> f {
+    -> l { -> x { -> g {
+      #{IF}[#{IS_EMPTY}[l]][
+        x
+      ][
+        -> y{
+          g[f[#{REST}[l]][x][g]][#{FIRST}[l]][y]
+        }
+      ]
+      }}}
+    }]
+  STR
+
+MAP = <<~STR.gsub(/(\s)/, "")
+  -> k { -> f {
+    #{FOLD}[k][#{EMPTY}][
+      -> l { -> x {#{UNSHIFT}[l][f[x]] }}
+    ]
+  } }
+  STR
+
+# string
+
+TEN = "#{MULTIPLY}[#{TWO}][#{FIVE}]"
+HUNDRED = "#{MULTIPLY}[#{TEN}][#{TEN}]"
+B = "#{TEN}"
+F = "#{INCREMENT}[#{B}]"
+I = "#{INCREMENT}[#{F}]"
+U = "#{INCREMENT}[#{I}]"
+ZED = "#{INCREMENT}[#{U}]"
+
+FIZZ = "#{UNSHIFT}[#{UNSHIFT}[#{UNSHIFT}[#{UNSHIFT}[#{EMPTY}][#{ZED}]][#{ZED}]][#{I}]][#{F}]"
+BUZZ = "#{UNSHIFT}[#{UNSHIFT}[#{UNSHIFT}[#{UNSHIFT}[#{EMPTY}][#{ZED}]][#{ZED}]][#{U}]][#{B}]"
+FIZZBUZZ = "#{UNSHIFT}[#{UNSHIFT}[#{UNSHIFT}[#{UNSHIFT}[#{BUZZ}][#{ZED}]][#{ZED}]][#{I}]][#{F}]"
+
+DIV = <<~STR.gsub(/(\s)/, "")
+  #{Z}[-> f { -> m { -> n {
+      #{IF}[#{IS_LESS_OR_EQUAL}[n][m]][
+        -> x {
+          #{INCREMENT}[f[#{SUBTRACT}[m][n]][n]][x]
+        }
+      ][
+        #{ZERO}
+      ]
+  }}}]
+  STR
+PUSH = <<~STR.gsub(/(\s)/, "")
+  -> l {
+    -> x {
+      #{FOLD}[l][#{UNSHIFT}[#{EMPTY}][x]][#{UNSHIFT}]
+    }
+  }
+  STR
+
+TO_DIGITS = <<~STR.gsub(/(\s)/, "")
+  #{Z}[->f { -> n { #{PUSH}[
+    #{IF}[#{IS_LESS_OR_EQUAL}[n][#{DECREMENT}[#{TEN}]]][
+      #{EMPTY}
+    ][
+      -> x {
+        f[#{DIV}[n][#{TEN}]][x]
+      }
+    ]
+  ][#{MOD}[n][#{TEN}]] }}]
+  STR
